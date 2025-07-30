@@ -1,0 +1,8 @@
+{
+  "prompts": [
+    "prompt/_base/core_prompt.md",
+    "prompt/spring_boot_service/spring_prompt.md"
+  ],
+  "tags": ["prompts", "unified"],
+  "autoExpand": true
+}

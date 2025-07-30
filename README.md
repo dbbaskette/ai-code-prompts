@@ -1,21 +1,21 @@
 # AI Code Prompts
 
-Reusable, unified prompts for AI code assistants: **Cursor**, **Windsurf**, **Claude**, and **Gemini**.
+This repository provides a powerful, reusable, and composable framework for instructing AI code assistants. It allows you to combine a core set of rules with project-specific prompts to ensure consistent, high-quality code generation across different tools like **Cursor**, **Windsurf**, **Claude**, and **Gemini**.
 
-## 📦 What's Inside
-- `prompt/_base/core_prompt.md` — shared base rules
-- App-specific prompts:
-  - `prompt/app_web/web_app_prompt.md`
-  - `prompt/service_api/api_service_prompt.md`
-  - `prompt/spring_boot_service/spring_prompt.md`
-  - `prompt/cli_tool/cli_prompt.md`
-  - `prompt/ml_pipeline/ml_prompt.md`
-  - `prompt/data_pipeline/dp_prompt.md`
-  - `prompt/mcp_server/mcp_prompt.md`
-- `deploy_prompts.sh` — interactive script to deploy prompts into an existing project directory
-- `.cursor.json`, `.windsurf.json` — sample metadata referencing the shared prompts
+## ✨ Key Features
+
+*   **Unified & Consistent**: A single `core_prompt.md` establishes the foundational rules for safety, quality, and interaction style for any AI assistant.
+*   **Composable**: Mix and match application-specific prompts (e.g., for a "Web App" and a "Service API") in a single project.
+*   **Project-Specific Context**: A `PROJECT.md` template is deployed to every project, ensuring the AI has specific details about your goals, tech stack, and architecture.
+*   **Tool Agnostic**: The deployment script generates configurations for multiple tools simultaneously:
+    *   `.cursor.json` & `.windsurf.json` for tools that read modular file lists.
+    *   `.claude.md` & `.gemini.md` for tools that prefer a single, combined context file.
+*   **DRY (Don't Repeat Yourself)**: Define a prompt once and reuse it everywhere, ensuring consistency and easy updates.
 
 ## 🚀 Quick Start
+
+Run the interactive deployment script from the root of this repository.
+
 ```bash
 # in this repo
 chmod +x deploy_prompts.sh

@@ -1,10 +1,20 @@
 #!/bin/bash
-# AI Prompt Project Generator
 
+# set -e: exit immediately if a command exits with a non-zero status.
+# set -u: treat unset variables as an error when substituting.
+# set -o pipefail: the return value of a pipeline is the status of the last command to exit with a non-zero status, or zero if no command exited with a non-zero status.
 set -euo pipefail
 
+# --- Configuration ---
 # Source directory is the repo root where this script lives
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ANSI color codes for a nicer CLI experience
+BOLD=$(tput bold)
+BLUE=$(tput setaf 4)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+RESET=$(tput sgr0)
 
 # App types available for selection
 APP_TYPES=(
@@ -17,29 +27,27 @@ APP_TYPES=(
   "service_api"
 )
 
-echo ""
-echo "🚀 AI Prompt Project Generator"
-echo "================================"
-echo ""
+# --- User Interaction ---
+echo -e "\n${BOLD}${BLUE}🚀 Welcome to the AI Prompt Project Generator${RESET}"
+echo "${BLUE}==============================================${RESET}"
+echo "This script will deploy a set of prompts to your project directory."
 
-read -rp "📁 Enter base directory for prompt deployment: " DEST_ROOT
-# expand ~ if present
+read -rp $'\n\e[32m📁 Enter the full path for the project directory to deploy to: \e[0m' DEST_ROOT
+# Expand the tilde (~) to the user's home directory if they use it
 DEST_ROOT="${DEST_ROOT/#\~/$HOME}"
 mkdir -p "$DEST_ROOT"
 
-read -rp "📦 Enter a name for this prompt project (metadata only): " PROJECT_NAME
+read -rp "${GREEN}📦 Enter a name for this project (for metadata purposes): ${RESET}" PROJECT_NAME
 PROJECT_PATH="$DEST_ROOT"
 
-echo ""
-echo "🧠 Select application types by entering numbers separated by spaces:"
+echo -e "\n${BOLD}${BLUE}🧠 Select one or more application types by entering numbers separated by spaces:${RESET}"
 for i in "${!APP_TYPES[@]}"; do
-  printf "  %d) %s\n" "$i" "${APP_TYPES[$i]}"
+  printf "   ${YELLOW}%d)${RESET} %s\n" "$i" "${APP_TYPES[$i]}"
 done
 
-read -rp $'\n> ' -a SELECTED_INDEXES
+read -rp $'\n\e[32m> \e[0m' -a SELECTED_INDEXES
 
-echo ""
-echo "✅ You selected:"
+echo -e "\n${GREEN}✅ You selected:${RESET}"
 SELECTED_TYPES=()
 for i in "${SELECTED_INDEXES[@]}"; do
   if [[ "$i" =~ ^[0-9]+$ ]] && (( i >= 0 && i < ${#APP_TYPES[@]} )); then
@@ -49,13 +57,15 @@ for i in "${SELECTED_INDEXES[@]}"; do
     echo "   ! Skipping invalid selection: $i"
   fi
 done
-echo ""
+echo -e "\n${YELLOW}⚙️  Deploying prompts...${RESET}"
 
+# --- File Operations ---
 # Ensure destination structure and copy base
 mkdir -p "$PROJECT_PATH/prompt/_base"
 cp "$SRC_DIR/prompt/_base/core_prompt.md" "$PROJECT_PATH/prompt/_base/"
 
 # Copy selected prompt folders
+# `shopt -s nullglob` prevents errors if a directory contains no .md files
 shopt -s nullglob
 for APP in "${SELECTED_TYPES[@]}"; do
   mkdir -p "$PROJECT_PATH/prompt/$APP"
@@ -63,13 +73,18 @@ for APP in "${SELECTED_TYPES[@]}"; do
     cp "$f" "$PROJECT_PATH/prompt/$APP/"
   done
 done
+
 # Copy base project instructions template
 cp "$SRC_DIR/PROJECT_TEMPLATE.md" "$PROJECT_PATH/PROJECT.md"
 shopt -u nullglob
 
+# --- Config Generation ---
 # Generate combined prompt (only selected app types)
 COMBINED="$PROJECT_PATH/combined_prompt.md"
 echo "# Combined Prompt\n" > "$COMBINED"
+echo -e "\n---\n\n# From: PROJECT.md\n" >> "$COMBINED"
+cat "$PROJECT_PATH/PROJECT.md" >> "$COMBINED"
+
 echo -e "\n---\n\n# From: prompt/_base/core_prompt.md\n" >> "$COMBINED"
 cat "$PROJECT_PATH/prompt/_base/core_prompt.md" >> "$COMBINED"
 
@@ -88,8 +103,8 @@ cp "$COMBINED" "$PROJECT_PATH/.gemini.md"
 CURSOR_JSON="$PROJECT_PATH/.cursor.json"
 WDS_JSON="$PROJECT_PATH/.windsurf.json"
 
-# Build JSON arrays dynamically
-PROMPTS_JSON="\"prompt/_base/core_prompt.md\""
+# Build a JSON-compatible string of file paths for .cursor.json and .windsurf.json
+PROMPTS_JSON="\"PROJECT.md\", \"prompt/_base/core_prompt.md\""
 for APP in "${SELECTED_TYPES[@]}"; do
   for f in "$PROJECT_PATH/prompt/$APP/"*.md; do
     REL="prompt/${APP}/$(basename "$f")"
@@ -120,9 +135,10 @@ combined_prompt.md
 .gemini.md
 EOF
 
-echo ""
-echo "🎉 Done! Prompts deployed to: $PROJECT_PATH"
-echo "   - Modular prompts in ./prompt/"
-echo "   - Combined: ./combined_prompt.md (.claude.md / .gemini.md)"
-echo "   - Tool configs: .cursor.json / .windsurf.json"
-echo ""
+# --- Final Output ---
+echo -e "\n${BOLD}${GREEN}🎉 Success! Prompts deployed to: ${RESET}${PROJECT_PATH}"
+echo "   - ${YELLOW}Modular prompts:${RESET} ./prompt/"
+echo "   - ${YELLOW}Combined prompt:${RESET} ./combined_prompt.md (and .claude.md / .gemini.md)"
+echo "   - ${YELLOW}Tool configs:${RESET}    .cursor.json / .windsurf.json"
+echo -e "\n${BOLD}Next Step:${RESET} Open ${PROJECT_PATH}/PROJECT.md and fill in your project details."
+echo -e ""

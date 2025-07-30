@@ -32,13 +32,21 @@ echo -e "\n${BOLD}${BLUE}🚀 Welcome to the AI Prompt Project Generator${RESET}
 echo "${BLUE}==============================================${RESET}"
 echo "This script will deploy a set of prompts to your project directory."
 
-read -rp $'\n\e[32m📁 Enter the full path for the project directory to deploy to: \e[0m' DEST_ROOT
+read -rp $'\n\e[32m📁 Enter the base path for your projects (e.g., ~/Projects): \e[0m' DEST_PARENT
 # Expand the tilde (~) to the user's home directory if they use it
-DEST_ROOT="${DEST_ROOT/#\~/$HOME}"
-mkdir -p "$DEST_ROOT"
+DEST_PARENT="${DEST_PARENT/#\~/$HOME}"
 
-read -rp "${GREEN}📦 Enter a name for this project (for metadata purposes): ${RESET}" PROJECT_NAME
-PROJECT_PATH="$DEST_ROOT"
+read -rp "${GREEN}📦 Enter a name for your project (this will be the directory name): ${RESET}" PROJECT_NAME
+
+# If the parent path already ends with the project name, don't append it again.
+# This makes the script more forgiving if the user provides the full project path as the parent.
+if [[ "$(basename "$DEST_PARENT")" == "$PROJECT_NAME" ]]; then
+    PROJECT_PATH="$DEST_PARENT"
+else
+    PROJECT_PATH="$DEST_PARENT/$PROJECT_NAME"
+fi
+echo -e "\nProject will be deployed to: ${BOLD}${PROJECT_PATH}${RESET}"
+mkdir -p "$PROJECT_PATH"
 
 echo -e "\n${BOLD}${BLUE}🧠 Select one or more application types by entering numbers separated by spaces:${RESET}"
 for i in "${!APP_TYPES[@]}"; do
@@ -60,9 +68,17 @@ done
 echo -e "\n${YELLOW}⚙️  Deploying prompts...${RESET}"
 
 # --- File Operations ---
+# Clean up existing app-specific prompt directories to ensure a fresh state.
+# This prevents stale prompts from remaining if the selection changes on a re-run.
+if [ -d "$PROJECT_PATH/prompt" ]; then
+    echo "   - Cleaning up old app-specific prompts..."
+    # Find all directories inside prompt/ that are not _base and remove them
+    find "$PROJECT_PATH/prompt" -mindepth 1 -maxdepth 1 -type d -not -name '_base' -exec rm -rf {} +
+fi
+
 # Ensure destination structure and copy base
 mkdir -p "$PROJECT_PATH/prompt/_base"
-cp "$SRC_DIR/prompt/_base/core_prompt.md" "$PROJECT_PATH/prompt/_base/"
+cp -f "$SRC_DIR/prompt/_base/core_prompt.md" "$PROJECT_PATH/prompt/_base/"
 
 # Copy selected prompt folders
 # `shopt -s nullglob` prevents errors if a directory contains no .md files
@@ -70,20 +86,26 @@ shopt -s nullglob
 for APP in "${SELECTED_TYPES[@]}"; do
   mkdir -p "$PROJECT_PATH/prompt/$APP"
   for f in "$SRC_DIR/prompt/$APP/"*.md; do
-    cp "$f" "$PROJECT_PATH/prompt/$APP/"
+    cp -f "$f" "$PROJECT_PATH/prompt/$APP/"
   done
 done
 
-# Copy base project instructions template
-cp "$SRC_DIR/PROJECT_TEMPLATE.md" "$PROJECT_PATH/PROJECT.md"
+# Copy base project instructions template, but DO NOT overwrite if it exists to prevent data loss.
+if [ ! -f "$PROJECT_PATH/PROJECT.md" ]; then
+  cp "$SRC_DIR/PROJECT_TEMPLATE.md" "$PROJECT_PATH/PROJECT.md"
+else
+  echo "   - Skipping PROJECT.md (already exists to prevent data loss)"
+fi
 shopt -u nullglob
 
 # --- Config Generation ---
 # Generate combined prompt (only selected app types)
 COMBINED="$PROJECT_PATH/combined_prompt.md"
-echo "# Combined Prompt\n" > "$COMBINED"
-echo -e "\n---\n\n# From: PROJECT.md\n" >> "$COMBINED"
-cat "$PROJECT_PATH/PROJECT.md" >> "$COMBINED"
+echo "# Combined Prompt" > "$COMBINED"
+echo -e "\n---\n" >> "$COMBINED"
+echo -e "# Project Context\n" >> "$COMBINED"
+# Note: We are intentionally writing a reference to PROJECT.md, not its content.
+echo "Refer to the user-provided 'PROJECT.md' file for specific project goals, tech stack, and architecture. That file is the primary source of truth for project-specific context." >> "$COMBINED"
 
 echo -e "\n---\n\n# From: prompt/_base/core_prompt.md\n" >> "$COMBINED"
 cat "$PROJECT_PATH/prompt/_base/core_prompt.md" >> "$COMBINED"
@@ -96,8 +118,8 @@ for APP in "${SELECTED_TYPES[@]}"; do
 done
 
 # Create convenience aliases
-cp "$COMBINED" "$PROJECT_PATH/.claude.md"
-cp "$COMBINED" "$PROJECT_PATH/.gemini.md"
+cp -f "$COMBINED" "$PROJECT_PATH/.claude.md"
+cp -f "$COMBINED" "$PROJECT_PATH/.gemini.md"
 
 # Generate tool metadata referencing modular files
 CURSOR_JSON="$PROJECT_PATH/.cursor.json"

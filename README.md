@@ -28,6 +28,11 @@ You'll be asked for:
 
 The script will copy the **selected** prompts to your target directory, generate a consolidated `combined_prompt.md`, and create convenience aliases: `.claude.md`, `.gemini.md`. It will also write `.cursor.json` & `.windsurf.json` that reference the same modular files.
 
+> **Note on Re-running**: The script is designed to be run multiple times on the same directory. It will perform a clean deployment:
+> *   **It overwrites** all generated files (`combined_prompt.md`, `.cursor.json`, etc.) to ensure they are up-to-date.
+> *   **It removes** any old application-specific prompt directories that are no longer selected.
+> *   **It does NOT overwrite** your existing `PROJECT.md` file, to prevent data loss.
+
 > The `README.md` is for this repository and is **not** copied by the script.
 
 ## 🧠 Philosophy
@@ -41,7 +46,9 @@ The script will copy the **selected** prompts to your target directory, generate
 3. Commit and re-run the script
 
 ## 🧪 Optional: Combined Prompt
-The script generates `combined_prompt.md` in the destination directory by concatenating `_base` and the selected app prompts. This is handy for tools that prefer a single file for context.
+The script generates `combined_prompt.md` in the destination directory. This file is a concatenation of the `core_prompt.md` and any selected application-specific prompts.
+
+**Important**: This combined prompt does **not** include the contents of `PROJECT.md`. Instead, it contains a reference telling the AI to read `PROJECT.md` as the primary source of truth for project context. This means you will likely need to provide both `combined_prompt.md` (or its aliases) and your completed `PROJECT.md` to your AI assistant.
 
 ## 📝 Licensing
 Add your preferred license here.

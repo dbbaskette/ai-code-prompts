@@ -63,6 +63,8 @@ for APP in "${SELECTED_TYPES[@]}"; do
     cp "$f" "$PROJECT_PATH/prompt/$APP/"
   done
 done
+# Copy base project instructions template
+cp "$SRC_DIR/PROJECT_TEMPLATE.md" "$PROJECT_PATH/PROJECT.md"
 shopt -u nullglob
 
 # Generate combined prompt (only selected app types)
